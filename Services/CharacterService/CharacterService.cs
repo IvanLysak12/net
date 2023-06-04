@@ -14,8 +14,10 @@ namespace net.Services.CharacterService
             new Character{ Id = 1, Name = "Sam"}
         };
         private readonly IMapper _mapper;
-        public CharacterService(IMapper mapper)
+        private readonly DataContext _context;
+        public CharacterService(IMapper mapper, DataContext context)
         {
+            _context = context;
             _mapper = mapper;
         }
         public async Task<ServiceResponse<List<GetCharacterDto>>> AddCharacter(AddCharacterDto newCharacter)
@@ -31,31 +33,32 @@ namespace net.Services.CharacterService
         public async Task<ServiceResponse<List<GetCharacterDto>>> DeleteCharacter(int id)
         {
             var serviceResponse = new ServiceResponse<List<GetCharacterDto>>();
-            
+
             try
             {
                 var character = characters.FirstOrDefault(c => c.Id == id);
-                if(character is null)
+                if (character is null)
                     throw new Exception($"Character with Id '{id}' not found.");
 
                 characters.Remove(character);
 
                 serviceResponse.Data = characters.Select(c => _mapper.Map<GetCharacterDto>(c)).ToList();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 serviceResponse.Success = false;
                 serviceResponse.Message = ex.Message;
             }
 
             return serviceResponse;
-        
+
         }
 
         public async Task<ServiceResponse<List<GetCharacterDto>>> GetAllCharacters()
         {
             var serviceResponse = new ServiceResponse<List<GetCharacterDto>>();
-            serviceResponse.Data = characters.Select(c => _mapper.Map<GetCharacterDto>(c)).ToList();
+            var dbCharacters = await _context.Characters.ToListAsync();
+            serviceResponse.Data = dbCharacters.Select(c => _mapper.Map<GetCharacterDto>(c)).ToList();
             return serviceResponse;
         }
 
@@ -71,14 +74,14 @@ namespace net.Services.CharacterService
         public async Task<ServiceResponse<GetCharacterDto>> UpdateCharacter(UpdateCharacterDto updatedCharacter)
         {
             var serviceResponse = new ServiceResponse<GetCharacterDto>();
-            
+
             try
             {
                 var character = characters.FirstOrDefault(c => c.Id == updatedCharacter.Id);
-                if(character is null)
+                if (character is null)
                     throw new Exception($"Character with Id '{updatedCharacter.Id}' not found.");
 
-                _mapper.Map(updatedCharacter,character);
+                _mapper.Map(updatedCharacter, character);
 
                 character.Name = updatedCharacter.Name;
                 character.HitPoints = updatedCharacter.HitPoints;
@@ -89,7 +92,7 @@ namespace net.Services.CharacterService
 
                 serviceResponse.Data = _mapper.Map<GetCharacterDto>(character);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 serviceResponse.Success = false;
                 serviceResponse.Message = ex.Message;
